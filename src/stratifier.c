@@ -2372,9 +2372,12 @@ static void *statsupdate(void *arg)
 
 		ck_rlock(&instance_lock);
 		HASH_ITER(hh, stratum_instances, client, tmp) {
-			user_instance_t *instance = client->user_instance;
+			user_instance_t *instance;
 			double reward, ghs;
 			bool idle = false;
+
+			if (!client->authorised)
+				continue;
 
 			if (now.tv_sec - client->last_share.tv_sec > 60) {
 				idle = true;
@@ -2395,6 +2398,7 @@ static void *statsupdate(void *arg)
 			ghs = client->dsps1440 * nonces;
 			suffix_string(ghs, suffix1440, 16, 0);
 
+			instance = client->user_instance;
 			reward = 25 * instance->pprop_shares;
 			reward /= pprop_shares;
 			val = json_pack("{sI,sI,sf,ss,ss,ss,ss,ss,ss}",
