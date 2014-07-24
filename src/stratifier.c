@@ -2420,7 +2420,7 @@ static void *statsupdate(void *arg)
 			instance = client->user_instance;
 			reward = 25 * instance->pprop_shares;
 			reward /= pprop_shares;
-			val = json_pack("{sI,sI,sf,ss,ss,ss,ss,ss,ss}",
+			val = json_pack("{sI,sI,sf,ss,ss,ss,ss}",
 					"Accepted", instance->diff_accepted,
 					"Rejected", instance->diff_rejected,
 					"Est reward", reward,
