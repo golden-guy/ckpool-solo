@@ -1434,6 +1434,7 @@ static void add_submit(stratum_instance_t *client, int diff, bool valid)
 	double tdiff, bdiff, dsps, drr, network_diff, bias;
 	int64_t next_blockid, optimal;
 	ckpool_t *ckp = client->ckp;
+	user_instance_t *instance;
 	tv_t now_t;
 
 	tv_time(&now_t);
@@ -1468,12 +1469,13 @@ static void add_submit(stratum_instance_t *client, int diff, bool valid)
 		stats.unaccounted_rejects += diff;
 	mutex_unlock(&stats_lock);
 
+	instance = client->user_instance;
 	if (valid) {
-		user_instance_t *instance = client->user_instance;
-
 		instance->pprop_shares += diff;
-		log_pprop(ckp->logdir, instance);
-	}
+		instance->diff_accepted += diff;
+	} else
+		instance->diff_rejected += diff;
+	log_pprop(ckp->logdir, instance);
 	/* Check the difficulty every 240 seconds or as many shares as we
 	 * should have had in that time, whichever comes first. */
 	if (client->ssdc < 72 && tdiff < 240)
