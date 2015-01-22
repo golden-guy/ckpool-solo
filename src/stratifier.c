@@ -1215,7 +1215,7 @@ static void dec_worker(ckpool_t *ckp, user_instance_t *instance)
 
 static void drop_client(sdata_t *sdata, int64_t id)
 {
-	stratum_instance_t *client, *tmp, *client_delete = NULL;
+	stratum_instance_t *client, *tmp;
 	bool dec = false;
 
 	LOGINFO("Stratifier dropping client %ld", id);
@@ -1257,16 +1257,14 @@ static void drop_client(sdata_t *sdata, int64_t id)
 	if (client)
 		__dec_instance_ref(client);
 	LL_FOREACH_SAFE(sdata->dead_instances, client, tmp) {
-		dealloc(client_delete);
 		if (!client->ref) {
 			LOGINFO("Stratifier discarding instance %ld", client->id);
 			LL_DELETE(sdata->dead_instances, client);
 			dealloc(client->workername);
 			dealloc(client->useragent);
-			client_delete = client;
+			free(client);
 		}
 	}
-	dealloc(client_delete);
 	ck_wunlock(&sdata->instance_lock);
 }
 
