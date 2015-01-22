@@ -1261,8 +1261,8 @@ static void drop_client(sdata_t *sdata, int64_t id)
 		if (!client->ref) {
 			LOGINFO("Stratifier discarding instance %ld", client->id);
 			LL_DELETE(sdata->dead_instances, client);
-			free(client->workername);
-			free(client->useragent);
+			dealloc(client->workername);
+			dealloc(client->useragent);
 			client_delete = client;
 		}
 	}
