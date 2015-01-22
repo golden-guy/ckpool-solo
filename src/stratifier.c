@@ -1222,6 +1222,8 @@ static void drop_client(sdata_t *sdata, int64_t id)
 
 	ck_wlock(&sdata->instance_lock);
 	client = __instance_by_id(sdata, id);
+	if (unlikely(client && client->ref))
+		client = NULL;
 	if (client) {
 		stratum_instance_t *old_client = NULL;
 
