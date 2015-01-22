@@ -1262,7 +1262,7 @@ static void drop_client(sdata_t *sdata, int64_t id)
 			LL_DELETE(sdata->dead_instances, client);
 			dealloc(client->workername);
 			dealloc(client->useragent);
-			free(client);
+			dealloc(client);
 		}
 	}
 	ck_wunlock(&sdata->instance_lock);
