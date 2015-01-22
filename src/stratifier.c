@@ -2015,6 +2015,7 @@ static int send_recv_auth(stratum_instance_t *client)
 out_fail:
 	ret = -1;
 out:
+	free(buf);
 	return ret;
 }
 
