@@ -125,7 +125,7 @@ static void dec_instance_ref(cdata_t *cdata, client_instance_t *client)
  * instances */
 static int accept_client(cdata_t *cdata, const int epfd, const uint64_t server)
 {
-	int fd, port, no_clients, sockd;
+	int fd, port, no_clients, sockd, ret = 1;
 	ckpool_t *ckp = cdata->ckp;
 	client_instance_t *client;
 	struct epoll_event event;
@@ -186,27 +186,29 @@ static int accept_client(cdata_t *cdata, const int epfd, const uint64_t server)
 		cdata->nfds, fd, no_clients, client->address_name, port);
 
 	client->fd = fd;
-	event.data.ptr = client;
+
+	ck_wlock(&cdata->lock);
+	event.data.u64 = client->id = cdata->client_id;
 	event.events = EPOLLIN;
 	if (unlikely(epoll_ctl(epfd, EPOLL_CTL_ADD, fd, &event) < 0)) {
 		LOGERR("Failed to epoll_ctl add in accept_client");
 		free(client);
-		return 0;
+		ret = 0;
+		goto out_unlock;
 	}
 
 	/* We increase the ref count on this client as epoll creates a pointer
 	 * to it. We drop that reference when the socket is closed which
 	 * removes it automatically from the epoll list. */
 	__inc_instance_ref(client);
-
-	ck_wlock(&cdata->lock);
 	cdata->clients_generated++;
-	client->id = cdata->client_id++;
+	cdata->client_id++;
 	HASH_ADD_I64(cdata->clients, id, client);
 	cdata->nfds++;
+out_unlock:
 	ck_wunlock(&cdata->lock);
 
-	return 1;
+	return ret;
 }
 
 /* Client must hold a reference count */
@@ -373,6 +375,8 @@ reparse:
 	goto retry;
 }
 
+static client_instance_t *ref_client_by_id(cdata_t *cdata, int64_t id);
+
 /* Waits on fds ready to read on from the list stored in conn_instance and
  * handles the incoming messages */
 void *receiver(void *arg)
@@ -391,9 +395,9 @@ void *receiver(void *arg)
 	serverfds = cdata->ckp->serverurls;
 	/* Add all the serverfds to the epoll */
 	for (i = 0; i < serverfds; i++) {
-		/* The small values will be easily identifiable compared to
-		 * pointers */
+		/* Mask the high bits for serverfds to easily distinguish them */
 		event.data.u64 = i;
+		event.data.u64 |= 0xFFFFFFFF00000000;
 		event.events = EPOLLIN;
 		ret = epoll_ctl(epfd, EPOLL_CTL_ADD, cdata->serverfd[i], &event);
 		if (ret < 0) {
@@ -420,22 +424,29 @@ void *receiver(void *arg)
 		}
 		if (unlikely(!ret))
 			continue;
-		if (event.data.u64 < (uint64_t)serverfds) {
-			ret = accept_client(cdata, epfd, event.data.u64);
+		if (event.data.u64 & 0xFFFFFFFF00000000) {
+			uint64_t serverfd = event.data.u64 & 0x00000000FFFFFFFF;
+
+			ret = accept_client(cdata, epfd, serverfd);
 			if (unlikely(ret < 0)) {
 				LOGEMERG("FATAL: Failed to accept_client in receiver");
 				break;
 			}
 			continue;
 		}
-		client = event.data.ptr;
+
+		client = ref_client_by_id(cdata, event.data.u64);
+		if (unlikely(!client))
+			continue;
 		if ((event.events & EPOLLERR) || (event.events & EPOLLHUP)) {
 			/* Client disconnected */
 			LOGDEBUG("Client fd %d HUP in epoll", client->fd);
 			invalidate_client(cdata->pi->ckp, cdata, client);
+			dec_instance_ref(cdata, client);
 			continue;
 		}
 		parse_client_msg(cdata, client);
+		dec_instance_ref(cdata, client);
 	}
 	return NULL;
 }
