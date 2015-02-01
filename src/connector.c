@@ -33,6 +33,7 @@ struct client_instance {
 	/* Reference count for when this instance is used outside of the
 	 * connector_data lock */
 	int ref;
+	bool msgpending; /* This client has a message on the ckmsgq parser */
 
 	/* For dead_clients list */
 	struct client_instance *next;
@@ -98,6 +99,8 @@ struct connector_data {
 	/* For protecting the pending sends list */
 	pthread_mutex_t sender_lock;
 	pthread_cond_t sender_cond;
+
+	ckmsgq_t *parser;	/* Received message parser */
 };
 
 typedef struct connector_data cdata_t;
@@ -285,6 +288,7 @@ static void parse_client_msg(cdata_t *cdata, client_instance_t *client)
 	char msg[PAGESIZE], *eol;
 	json_t *val;
 
+	LOGDEBUG("Parsing message from client %ld", client->id);
 retry:
 	/* Select should always return positive after poll unless we have
 	 * been disconnected. On retries, decdatade whether we should do further
@@ -375,7 +379,26 @@ reparse:
 	goto retry;
 }
 
-static client_instance_t *ref_client_by_id(cdata_t *cdata, int64_t id);
+static client_instance_t *msgref_client_by_id(cdata_t *cdata, int64_t id)
+{
+	client_instance_t *client;
+
+	ck_ilock(&cdata->lock);
+	HASH_FIND_I64(cdata->clients, &id, client);
+	if (client) {
+		if (!client->msgpending) {
+			ck_ulock(&cdata->lock);
+			client->msgpending = true;
+			__inc_instance_ref(client);
+			ck_dwilock(&cdata->lock);
+		} else
+			client = NULL;
+	}
+	ck_uilock(&cdata->lock);
+
+	return client;
+}
+
 
 /* Waits on fds ready to read on from the list stored in conn_instance and
  * handles the incoming messages */
@@ -435,8 +458,8 @@ void *receiver(void *arg)
 			continue;
 		}
 
-		client = ref_client_by_id(cdata, event.data.u64);
-		if (unlikely(!client))
+		client = msgref_client_by_id(cdata, event.data.u64);
+		if (!client)
 			continue;
 		if ((event.events & EPOLLERR) || (event.events & EPOLLHUP)) {
 			/* Client disconnected */
@@ -445,8 +468,7 @@ void *receiver(void *arg)
 			dec_instance_ref(cdata, client);
 			continue;
 		}
-		parse_client_msg(cdata, client);
-		dec_instance_ref(cdata, client);
+		ckmsgq_add(cdata->parser, client);
 	}
 	return NULL;
 }
@@ -840,6 +862,27 @@ out:
 	return ret;
 }
 
+static void dec_msginstance_ref(cdata_t *cdata, client_instance_t *client)
+{
+	ck_wlock(&cdata->lock);
+	client->msgpending = false;
+	__dec_instance_ref(client);
+	ck_wunlock(&cdata->lock);
+}
+
+/* Entered with client holding a reference count */
+static void message_parser(ckpool_t *ckp, client_instance_t *client)
+{
+	cdata_t *cdata = ckp->data;
+
+	if (unlikely(!client)) {
+		LOGWARNING("NULL client passed to message_parser");
+		return;
+	}
+	parse_client_msg(cdata, client);
+	dec_msginstance_ref(cdata, client);
+}
+
 int connector(proc_instance_t *pi)
 {
 	cdata_t *cdata = ckzalloc(sizeof(cdata_t));
@@ -942,6 +985,7 @@ int connector(proc_instance_t *pi)
 	cdata->pi = pi;
 	cdata->nfds = 0;
 	cdata->client_id = 1;
+	cdata->parser = create_ckmsgq(ckp, "cparser", &message_parser);
 	mutex_init(&cdata->sender_lock);
 	cond_init(&cdata->sender_cond);
 	create_pthread(&cdata->pth_sender, sender, cdata);
