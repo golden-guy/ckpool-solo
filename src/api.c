@@ -41,7 +41,7 @@ struct api_command {
  * response and return it on the original socket. */
 void ckpool_api(ckpool_t __maybe_unused *ckp, apimsg_t *apimsg)
 {
-	char *cmd = NULL, *response = NULL, *procresponse = NULL;
+	char *cmd = NULL, *response = NULL, *procresponse = NULL, *command;
 	json_t *val = NULL, *response_val = NULL, *params = NULL;
 	struct api_command *ac = NULL;
 	json_error_t err_val;
@@ -80,27 +80,35 @@ void ckpool_api(ckpool_t __maybe_unused *ckp, apimsg_t *apimsg)
 			   "result", false, "error", -3, "Unknown command", "response", json_null());
 		goto out_send;
 	}
-	if (unlikely(ac->params && !params)) {
-		LOGWARNING("Failed to find mandatory params in API command %s", apimsg->buf);
-		JSON_CPACK(response_val, "{s:b,s:[is],s:o}",
-			   "result", false, "error", -4, "Missing params", "response", json_null());
-		goto out_send;
-	}
-	/* FIXME: Need to figure out how to encapsulate mandatory parameters */
+	if (ac->params) {
+		char *paramstr;
+
+		if (unlikely(!params)) {
+			LOGWARNING("Failed to find mandatory params in API command %s", apimsg->buf);
+			JSON_CPACK(response_val, "{s:b,s:[is],s:o}",
+				"result", false, "error", -4, "Missing params", "response", json_null());
+			goto out_send;
+		}
+		paramstr = json_dumps(params, JSON_PRESERVE_ORDER);
+		ASPRINTF(&command, "%s=%s", ac->proccmd, paramstr);
+		free(paramstr);
+	} else
+		command = strdup(ac->proccmd);
 	switch(ac->process) {
 		case PROC_MAIN:
-			procresponse = send_recv_proc(&ckp->main, ac->proccmd);
+			procresponse = send_recv_proc(&ckp->main, command);
 			break;
 		case PROC_GENERATOR:
-			procresponse = send_recv_proc(ckp->generator, ac->proccmd);
+			procresponse = send_recv_proc(ckp->generator, command);
 			break;
 		case PROC_STRATIFER:
-			procresponse = send_recv_proc(ckp->stratifier, ac->proccmd);
+			procresponse = send_recv_proc(ckp->stratifier, command);
 			break;
 		case PROC_CONNECTOR:
-			procresponse = send_recv_proc(ckp->connector, ac->proccmd);
+			procresponse = send_recv_proc(ckp->connector, command);
 			break;
 	}
+	free(command);
 	if (unlikely(!procresponse)) {
 		LOGWARNING("Failed to get API response from process %d to command %s msg %s",
 			   ac->process, ac->proccmd, apimsg->buf);
