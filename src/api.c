@@ -42,7 +42,8 @@ ERROR VALUES:
 -2, "No command"
 -3, "Unknown command"
 -4, "Missing params"
--5, "No process response"
+-5, "No process response"	:internal code error
+-6: "Invalid json response" 	:internal code error
 
 
 COMMANDS WITH PARAMS:
