@@ -23,7 +23,9 @@ struct apimsg {
 
 void ckpool_api(ckpool_t __maybe_unused *ckp, apimsg_t *apimsg);
 void _send_api_response(json_t *val, const int sockd, const char *file, const char *func, const int line);
-
 #define send_api_response(_val, _sockd) _send_api_response(_val, _sockd,  __FILE__, __func__, __LINE__)
+json_t *_json_encode_errormsg(json_error_t *err_val, const char *func);
+#define json_encode_errormsg(err_val) _json_encode_errormsg(err_val, __func__)
+json_t *json_errormsg(const char *fmt, ...);
 
 #endif /* API_H */

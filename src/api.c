@@ -10,6 +10,7 @@
 #include "config.h"
 
 #include <jansson.h>
+#include <stdarg.h>
 #include <stdio.h>
 #include <unistd.h>
 
@@ -189,3 +190,31 @@ void _send_api_response(json_t *val, const int sockd, const char *file, const ch
 	send_unix_msg(sockd, response);
 	free(response);
 }
+
+/* Create a json errormsg string from the json_error_t created on failed json decode */
+json_t *_json_encode_errormsg(json_error_t *err_val, const char *func)
+{
+	json_t *ret;
+	char *buf;
+
+	ASPRINTF(&buf, "Failed to JSON decode in %s (%d):%s",  func, err_val->line, err_val->text);
+	JSON_CPACK(ret, "{ss}", "errormsg", buf);
+	free(buf);
+	return ret;
+}
+
+/* Create a json errormsg string from varargs */
+json_t *json_errormsg(const char *fmt, ...)
+{
+	char *buf = NULL;
+	json_t *ret;
+	va_list ap;
+
+	va_start(ap, fmt);
+	VASPRINTF(&buf, fmt, ap);
+	va_end(ap);
+	JSON_CPACK(ret, "{ss}", "errormsg", buf);
+	free(buf);
+	return ret;
+}
+
