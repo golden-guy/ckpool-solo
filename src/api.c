@@ -52,6 +52,7 @@ struct api_command {
 	{ "connector.stats",	PROC_CONNECTOR,	"stats",	0},
 	{ "stratifier.stats",	PROC_STRATIFER,	"stats",	0},
 	{ "generator.stats",	PROC_GENERATOR, "stats",	0},
+	{ "proxy.list",		PROC_GENERATOR, "list",		0},
 	{ "", -1, "" , 0}
 };
 
@@ -134,8 +135,18 @@ void ckpool_api(ckpool_t __maybe_unused *ckp, apimsg_t *apimsg)
 			   "result", false, "error", -5, "No process response", "response", json_null());
 		goto out_send;
 	}
-	JSON_CPACK(response_val, "{s:b,s:o,s:[s]}",
-		   "result", false, "error", json_null(), "response", procresponse);
+	json_decref(val);
+	val = json_loads(procresponse, 0, &err_val);
+	if (unlikely(!val)) {
+		LOGWARNING("Failed to JSON decode API response \"%s\" (%d):%s", procresponse,
+			   err_val.line, err_val.text);
+		JSON_CPACK(response_val, "{s:b,s:[is],s:o}",
+			   "result", false, "error", -6, "Invalid json response", "response", json_null());
+		goto out_send;
+	}
+	JSON_CPACK(response_val, "{s:b,s:o,s:o}",
+		   "result", true, "error", json_null(), "response", val);
+	val = NULL;
 out_send:
 	response = json_dumps(response_val, JSON_NO_UTF8 | JSON_PRESERVE_ORDER);
 	if (unlikely(!send_unix_msg(apimsg->sockd, response))) {
