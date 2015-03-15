@@ -25,6 +25,24 @@
 #define PROC_STRATIFER	2
 #define PROC_CONNECTOR	3
 
+/*
+
+API JSON COMMAND STRUCTURE:
+{"command":$cmdname, "params":$params}
+params are only mandatory for certain commands and can otherwise be omitted.
+
+API JSON RESPONSE STRUCTURE:
+{"result":$boolean, "error":$errorval, "response":$responseval}
+
+ERROR VALUES:
+-1, "Invalid json"
+-2, "No command"
+-3, "Unknown command"
+-4, "Missing params"
+-5, "No process response"
+
+*/
+
 struct api_command {
 	const char *cmd;	/* API command we receive */
 	int process;		/* Process to send request to */
@@ -113,7 +131,7 @@ void ckpool_api(ckpool_t __maybe_unused *ckp, apimsg_t *apimsg)
 		LOGWARNING("Failed to get API response from process %d to command %s msg %s",
 			   ac->process, ac->proccmd, apimsg->buf);
 		JSON_CPACK(response_val, "{s:b,s:[is],s:o}",
-			   "result", false, "error", -4, "No process response", "response", json_null());
+			   "result", false, "error", -5, "No process response", "response", json_null());
 		goto out_send;
 	}
 	JSON_CPACK(response_val, "{s:b,s:o,s:[s]}",
