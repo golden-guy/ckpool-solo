@@ -35,6 +35,8 @@ params are only mandatory for certain commands and can otherwise be omitted.
 API JSON RESPONSE STRUCTURE:
 {"result":$boolean, "error":$errorval, "response":$responseval}
 
+$responseval includes the key errormsg which is null on success
+
 ERROR VALUES:
 -1, "Invalid json"
 -2, "No command"
@@ -175,22 +177,6 @@ out:
 	free(apimsg);
 }
 
-/* Return an API response from a json structure to sockd */
-void _send_api_response(json_t *val, const int sockd, const char *file, const char *func, const int line)
-{
-	char *response;
-
-	response = json_dumps(val, JSON_NO_UTF8 | JSON_PRESERVE_ORDER);
-	if (unlikely(!response)) {
-		LOGWARNING("Failed to get json to send from %s %s:%d", file, func, line);
-		send_unix_msg(sockd, "");
-		return;
-	}
-	json_decref(val);
-	send_unix_msg(sockd, response);
-	free(response);
-}
-
 /* Create a json errormsg string from the json_error_t created on failed json decode */
 json_t *_json_encode_errormsg(json_error_t *err_val, const char *func)
 {
@@ -218,3 +204,22 @@ json_t *json_errormsg(const char *fmt, ...)
 	return ret;
 }
 
+/* Return an API response from a json structure to sockd */
+void _send_api_response(json_t *val, const int sockd, const char *file, const char *func, const int line)
+{
+	char *response;
+
+	if (unlikely(!val))
+		val = json_errormsg("Failed to get json to send from %s %s:%d", file, func, line);
+	else
+		json_object_set(val, "errormsg", json_null());
+	response = json_dumps(val, JSON_NO_UTF8 | JSON_PRESERVE_ORDER);
+	if (unlikely(!response)) {
+		LOGWARNING("Failed to get json to send from %s %s:%d", file, func, line);
+		send_unix_msg(sockd, "");
+		return;
+	}
+	json_decref(val);
+	send_unix_msg(sockd, response);
+	free(response);
+}
