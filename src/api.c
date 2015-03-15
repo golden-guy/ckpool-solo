@@ -45,6 +45,7 @@ ERROR VALUES:
 COMMANDS WITH PARAMS:
 	COMMAND		PARAMS
 	subproxy.list	id:$proxyid
+	proxy.add	url:$url,auth:$auth,pass:$pass
 
 */
 
@@ -59,6 +60,7 @@ struct api_command {
 	{ "generator.stats",	PROC_GENERATOR, "stats",	0},
 	{ "proxy.list",		PROC_GENERATOR, "list",		0},
 	{ "subproxy.list",	PROC_GENERATOR, "sublist",	1},
+	{ "proxy.add",		PROC_GENERATOR, "addproxy",	1},
 	{ "", -1, "" , 0}
 };
 
