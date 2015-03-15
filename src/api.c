@@ -41,6 +41,11 @@ ERROR VALUES:
 -4, "Missing params"
 -5, "No process response"
 
+
+COMMANDS WITH PARAMS:
+	COMMAND		PARAMS
+	subproxy.list	id:$proxyid
+
 */
 
 struct api_command {
@@ -53,6 +58,7 @@ struct api_command {
 	{ "stratifier.stats",	PROC_STRATIFER,	"stats",	0},
 	{ "generator.stats",	PROC_GENERATOR, "stats",	0},
 	{ "proxy.list",		PROC_GENERATOR, "list",		0},
+	{ "subproxy.list",	PROC_GENERATOR, "sublist",	1},
 	{ "", -1, "" , 0}
 };
 
