@@ -173,3 +173,19 @@ out:
 	free(apimsg->buf);
 	free(apimsg);
 }
+
+/* Return an API response from a json structure to sockd */
+void _send_api_response(json_t *val, const int sockd, const char *file, const char *func, const int line)
+{
+	char *response;
+
+	response = json_dumps(val, JSON_NO_UTF8 | JSON_PRESERVE_ORDER);
+	if (unlikely(!response)) {
+		LOGWARNING("Failed to get json to send from %s %s:%d", file, func, line);
+		send_unix_msg(sockd, "");
+		return;
+	}
+	json_decref(val);
+	send_unix_msg(sockd, response);
+	free(response);
+}

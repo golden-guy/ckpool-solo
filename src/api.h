@@ -22,5 +22,8 @@ struct apimsg {
 };
 
 void ckpool_api(ckpool_t __maybe_unused *ckp, apimsg_t *apimsg);
+void _send_api_response(json_t *val, const int sockd, const char *file, const char *func, const int line);
+
+#define send_api_response(_val, _sockd) _send_api_response(_val, _sockd,  __FILE__, __func__, __LINE__)
 
 #endif /* API_H */
