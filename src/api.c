@@ -212,7 +212,7 @@ void _send_api_response(json_t *val, const int sockd, const char *file, const ch
 
 	if (unlikely(!val))
 		val = json_errormsg("Failed to get json to send from %s %s:%d", file, func, line);
-	else
+	else if (!json_object_get(val, "errormsg"))
 		json_object_set(val, "errormsg", json_null());
 	response = json_dumps(val, JSON_NO_UTF8 | JSON_PRESERVE_ORDER);
 	if (unlikely(!response)) {
