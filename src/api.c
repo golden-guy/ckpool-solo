@@ -51,6 +51,8 @@ COMMANDS WITH PARAMS:
 	subproxy.list	id:$proxyid
 	proxy.add	url:$url,auth:$auth,pass:$pass
 	proxy.del	id:$proxyid
+	proxy.enable	id:$proxyid
+	proxy.disable	id:$proxyid
 
 */
 
@@ -67,6 +69,8 @@ struct api_command {
 	{ "subproxy.list",	PROC_GENERATOR, "sublist",	1},
 	{ "proxy.add",		PROC_GENERATOR, "addproxy",	1},
 	{ "proxy.del",		PROC_GENERATOR, "delproxy",	1},
+	{ "proxy.enable",	PROC_GENERATOR, "enableproxy",	1},
+	{ "proxy.disable",	PROC_GENERATOR, "disableproxy",	1},
 	{ "", -1, "" , 0}
 };
 
