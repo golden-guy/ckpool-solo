@@ -50,6 +50,7 @@ COMMANDS WITH PARAMS:
 	COMMAND		PARAMS
 	subproxy.list	id:$proxyid
 	proxy.add	url:$url,auth:$auth,pass:$pass
+	proxy.del	id:$proxyid
 
 */
 
@@ -65,6 +66,7 @@ struct api_command {
 	{ "proxy.list",		PROC_GENERATOR, "list",		0},
 	{ "subproxy.list",	PROC_GENERATOR, "sublist",	1},
 	{ "proxy.add",		PROC_GENERATOR, "addproxy",	1},
+	{ "proxy.del",		PROC_GENERATOR, "delproxy",	1},
 	{ "", -1, "" , 0}
 };
 
