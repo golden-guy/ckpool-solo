@@ -53,6 +53,7 @@ COMMANDS WITH PARAMS:
 	proxy.del	id:$proxyid
 	proxy.enable	id:$proxyid
 	proxy.disable	id:$proxyid
+	user.get	user:$username
 
 */
 
@@ -71,6 +72,7 @@ struct api_command {
 	{ "proxy.del",		PROC_GENERATOR, "delproxy",	1},
 	{ "proxy.enable",	PROC_GENERATOR, "enableproxy",	1},
 	{ "proxy.disable",	PROC_GENERATOR, "disableproxy",	1},
+	{ "user.get",		PROC_STRATIFER, "getuser",	1},
 	{ "", -1, "" , 0}
 };
 
