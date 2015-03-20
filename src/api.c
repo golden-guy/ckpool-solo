@@ -47,12 +47,13 @@ ERROR VALUES:
 
 
 COMMANDS WITH PARAMS:
-	COMMAND		PARAMS
+	COMMAND		PARAMS			OPTIONAL
 	subproxy.list	id:$proxyid
 	proxy.add	url:$url,auth:$auth,pass:$pass
 	proxy.del	id:$proxyid
 	proxy.enable	id:$proxyid
 	proxy.disable	id:$proxyid
+	proxy.get	id:$proxyid		subid:$subproxyid
 	user.get	user:$username
 
 */
@@ -72,6 +73,7 @@ struct api_command {
 	{ "proxy.del",		PROC_GENERATOR, "delproxy",	1},
 	{ "proxy.enable",	PROC_GENERATOR, "enableproxy",	1},
 	{ "proxy.disable",	PROC_GENERATOR, "disableproxy",	1},
+	{ "proxy.get",		PROC_STRATIFER, "getproxy",	1},
 	{ "user.get",		PROC_STRATIFER, "getuser",	1},
 	{ "", -1, "" , 0}
 };
