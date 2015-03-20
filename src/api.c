@@ -29,7 +29,7 @@
 /*
 
 API JSON COMMAND STRUCTURE:
-{"command":$cmdname, "params":$params}
+{"command":$cmdname, "params":{$params}}
 params are only mandatory for certain commands and can otherwise be omitted.
 
 API JSON RESPONSE STRUCTURE:
@@ -49,7 +49,7 @@ ERROR VALUES:
 COMMANDS WITH PARAMS:
 	COMMAND		PARAMS				OPTIONAL
 	subproxy.list	id:$proxyid
-	proxy.add	url:$url,auth:$auth,pass:$pass
+	proxy.add	url:$url,auth:$auth,pass:$pass	userid:$userid
 	proxy.del	id:$proxyid
 	proxy.enable	id:$proxyid
 	proxy.disable	id:$proxyid
