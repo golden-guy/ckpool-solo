@@ -46,6 +46,14 @@ ERROR VALUES:
 -6: "Invalid json response" 	:internal code error
 
 
+COMMANDS WITHOUT PARAMS:
+	COMMAND
+	connector.stats
+	stratifier.stats
+	generator.stats
+	proxy.list
+
+
 COMMANDS WITH PARAMS:
 	COMMAND		PARAMS				OPTIONAL
 	subproxy.list	id:$proxyid
