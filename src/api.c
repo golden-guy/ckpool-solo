@@ -64,6 +64,7 @@ COMMANDS WITH PARAMS:
 	proxy.get	id:$proxyid			subid:$subproxyid
 	proxy.setprio	id:$proxyid,priority:$priority
 	user.get	user:$username
+	worker.get	worker:$workername
 
 */
 
@@ -85,6 +86,7 @@ struct api_command {
 	{ "proxy.get",		PROC_STRATIFER, "getproxy",	1},
 	{ "proxy.setprio",	PROC_STRATIFER,	"setproxy",	1},
 	{ "user.get",		PROC_STRATIFER, "getuser",	1},
+	{ "worker.get",		PROC_STRATIFER,	"getworker",	1},
 	{ "", -1, "" , 0}
 };
 
