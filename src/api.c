@@ -112,6 +112,8 @@ struct api_command {
 	{ "proxy.stats",	PROC_GENERATOR, "proxystats",	1},
 	{ "user.get",		PROC_STRATIFER, "getuser",	1},
 	{ "user.getclients",	PROC_STRATIFER, "userclients",	1},
+	{ "user.clientinfo",	PROC_STRATIFER, "ucinfo",	1},
+	{ "worker.clientinfo",	PROC_STRATIFER, "wcinfo",	1},
 	{ "worker.get",		PROC_STRATIFER,	"getworker",	1},
 	{ "worker.getclients",	PROC_STRATIFER, "workerclients",1},
 	{ "", -1, "" , 0}
