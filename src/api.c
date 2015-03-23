@@ -49,22 +49,23 @@ ERROR VALUES:
 COMMANDS WITHOUT PARAMS:
 	COMMAND
 	connector.stats
-	stratifier.stats
 	generator.stats
 	proxy.list
+	stratifier.stats
 
 
 COMMANDS WITH PARAMS:
 	COMMAND		PARAMS				OPTIONAL
-	subproxy.list	id:$proxyid
 	proxy.add	url:$url,auth:$auth,pass:$pass	userid:$userid
 	proxy.del	id:$proxyid
-	proxy.enable	id:$proxyid
 	proxy.disable	id:$proxyid
+	proxy.enable	id:$proxyid
 	proxy.get	id:$proxyid			subid:$subproxyid
 	proxy.setprio	id:$proxyid,priority:$priority
 	proxy.stats	id:$proxyid			subid:$subproxyid
+	subproxy.list	id:$proxyid
 	user.get	user:$username
+	user.getclients	user:$username
 	worker.get	worker:$workername
 
 */
@@ -88,6 +89,7 @@ struct api_command {
 	{ "proxy.setprio",	PROC_STRATIFER,	"setproxy",	1},
 	{ "proxy.stats",	PROC_GENERATOR, "proxystats",	1},
 	{ "user.get",		PROC_STRATIFER, "getuser",	1},
+	{ "user.getclients",	PROC_STRATIFER, "userclients",	1},
 	{ "worker.get",		PROC_STRATIFER,	"getworker",	1},
 	{ "", -1, "" , 0}
 };
