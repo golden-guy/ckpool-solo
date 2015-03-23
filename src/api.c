@@ -63,6 +63,7 @@ COMMANDS WITH PARAMS:
 	proxy.disable	id:$proxyid
 	proxy.get	id:$proxyid			subid:$subproxyid
 	proxy.setprio	id:$proxyid,priority:$priority
+	proxy.stats	id:$proxyid			subid:$subproxyid
 	user.get	user:$username
 	worker.get	worker:$workername
 
@@ -85,6 +86,7 @@ struct api_command {
 	{ "proxy.disable",	PROC_GENERATOR, "disableproxy",	1},
 	{ "proxy.get",		PROC_STRATIFER, "getproxy",	1},
 	{ "proxy.setprio",	PROC_STRATIFER,	"setproxy",	1},
+	{ "proxy.stats",	PROC_GENERATOR, "proxystats",	1},
 	{ "user.get",		PROC_STRATIFER, "getuser",	1},
 	{ "worker.get",		PROC_STRATIFER,	"getworker",	1},
 	{ "", -1, "" , 0}
