@@ -68,6 +68,7 @@ COMMANDS WITH PARAMS:
 	proxy.disable		id:$proxyid
 	proxy.enable		id:$proxyid
 	proxy.get		id:$proxyid			subid:$subproxyid
+	proxy.info						userid:$userid
 	proxy.setprio		id:$proxyid,priority:$priority
 	proxy.stats		id:$proxyid			subid:$subproxyid
 	subproxy.list		id:$proxyid
@@ -106,6 +107,7 @@ struct api_command {
 	{ "proxy.enable",	PROC_GENERATOR, "enableproxy",	1},
 	{ "proxy.disable",	PROC_GENERATOR, "disableproxy",	1},
 	{ "proxy.get",		PROC_STRATIFER, "getproxy",	1},
+	{ "proxy.info",		PROC_STRATIFER, "proxyinfo",	0},
 	{ "proxy.setprio",	PROC_STRATIFER,	"setproxy",	1},
 	{ "proxy.stats",	PROC_GENERATOR, "proxystats",	1},
 	{ "user.get",		PROC_STRATIFER, "getuser",	1},
@@ -119,7 +121,7 @@ struct api_command {
  * response and return it on the original socket. */
 void ckpool_api(ckpool_t __maybe_unused *ckp, apimsg_t *apimsg)
 {
-	char *cmd = NULL, *response = NULL, *procresponse = NULL, *command;
+	char *cmd = NULL, *response = NULL, *procresponse = NULL, *command, *paramstr;
 	json_t *val = NULL, *response_val = NULL, *params = NULL;
 	struct api_command *ac = NULL;
 	json_error_t err_val;
@@ -159,8 +161,6 @@ void ckpool_api(ckpool_t __maybe_unused *ckp, apimsg_t *apimsg)
 		goto out_send;
 	}
 	if (ac->params) {
-		char *paramstr;
-
 		if (unlikely(!params)) {
 			LOGWARNING("Failed to find mandatory params in API command %s", apimsg->buf);
 			JSON_CPACK(response_val, "{s:b,s:[is],s:o}",
@@ -170,8 +170,14 @@ void ckpool_api(ckpool_t __maybe_unused *ckp, apimsg_t *apimsg)
 		paramstr = json_dumps(params, JSON_PRESERVE_ORDER);
 		ASPRINTF(&command, "%s=%s", ac->proccmd, paramstr);
 		free(paramstr);
-	} else
-		command = strdup(ac->proccmd);
+	} else {
+		if (params) {
+			paramstr = json_dumps(params, JSON_PRESERVE_ORDER);
+			ASPRINTF(&command, "%s=%s", ac->proccmd, paramstr);
+			free(paramstr);
+		} else
+			command = strdup(ac->proccmd);
+	}
 	switch(ac->process) {
 		case PROC_MAIN:
 			procresponse = send_recv_proc(&ckp->main, command);
