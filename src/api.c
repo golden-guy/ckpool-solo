@@ -35,6 +35,12 @@ params are only mandatory for certain commands and can otherwise be omitted.
 API JSON RESPONSE STRUCTURE:
 {"result":$boolean, "error":$errorval, "response":$responseval}
 
+ Result/error is whether we successfully passed the command to the relevant
+ ckpool process.
+
+ Responseval is a json structure in its own right and gives the process'
+ response to the request and includes its own errormsg should the query fail.
+
 $responseval includes the key errormsg which is null on success
 
 ERROR VALUES:
@@ -69,6 +75,17 @@ COMMANDS WITH PARAMS:
 	user.getclients		user:$username
 	worker.get		worker:$workername
 	worker.getclients	worker:$workername
+
+
+Examples of valid requests:
+{"command":"stratifier.stats"}
+{"command":"user.get","params":{"user":"a"}}
+{"command":"user.getclients","params":{"user":"a"}}
+{"command":"client.get","params":{"id":1}}
+
+Examples of responses:
+{"result": true, "error": null, "response": {"user": "a", "clients": [1, 5, 8], "errormsg": null}}
+
 
 */
 
