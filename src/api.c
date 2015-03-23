@@ -54,10 +54,13 @@ ERROR VALUES:
 
 COMMANDS WITHOUT PARAMS:
 	COMMAND
+	clients.info
 	connector.stats
 	generator.stats
 	proxy.list
 	stratifier.stats
+	users.info
+	workers.info
 
 
 COMMANDS WITH PARAMS:
@@ -97,6 +100,7 @@ struct api_command {
 	bool params;		/* Does this command take parameters */
 } api_cmds[] = {
 	{ "client.get",		PROC_STRATIFER, "getclient",	1},
+	{ "clients.info",	PROC_STRATIFER, "clients",	0},
 	{ "connector.stats",	PROC_CONNECTOR,	"stats",	0},
 	{ "stratifier.stats",	PROC_STRATIFER,	"stats",	0},
 	{ "generator.stats",	PROC_GENERATOR, "stats",	0},
@@ -113,9 +117,11 @@ struct api_command {
 	{ "user.get",		PROC_STRATIFER, "getuser",	1},
 	{ "user.getclients",	PROC_STRATIFER, "userclients",	1},
 	{ "user.clientinfo",	PROC_STRATIFER, "ucinfo",	1},
+	{ "users.info",		PROC_STRATIFER, "users",	0},
 	{ "worker.clientinfo",	PROC_STRATIFER, "wcinfo",	1},
 	{ "worker.get",		PROC_STRATIFER,	"getworker",	1},
 	{ "worker.getclients",	PROC_STRATIFER, "workerclients",1},
+	{ "workers.info",	PROC_STRATIFER, "workers",	0},
 	{ "", -1, "" , 0}
 };
 
