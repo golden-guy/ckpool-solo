@@ -55,18 +55,19 @@ COMMANDS WITHOUT PARAMS:
 
 
 COMMANDS WITH PARAMS:
-	COMMAND		PARAMS				OPTIONAL
-	proxy.add	url:$url,auth:$auth,pass:$pass	userid:$userid
-	proxy.del	id:$proxyid
-	proxy.disable	id:$proxyid
-	proxy.enable	id:$proxyid
-	proxy.get	id:$proxyid			subid:$subproxyid
-	proxy.setprio	id:$proxyid,priority:$priority
-	proxy.stats	id:$proxyid			subid:$subproxyid
-	subproxy.list	id:$proxyid
-	user.get	user:$username
-	user.getclients	user:$username
-	worker.get	worker:$workername
+	COMMAND			PARAMS				OPTIONAL
+	proxy.add		url:$url,auth:$auth,pass:$pass	userid:$userid
+	proxy.del		id:$proxyid
+	proxy.disable		id:$proxyid
+	proxy.enable		id:$proxyid
+	proxy.get		id:$proxyid			subid:$subproxyid
+	proxy.setprio		id:$proxyid,priority:$priority
+	proxy.stats		id:$proxyid			subid:$subproxyid
+	subproxy.list		id:$proxyid
+	user.get		user:$username
+	user.getclients		user:$username
+	worker.get		worker:$workername
+	worker.getclients	worker:$workername
 
 */
 
@@ -91,6 +92,7 @@ struct api_command {
 	{ "user.get",		PROC_STRATIFER, "getuser",	1},
 	{ "user.getclients",	PROC_STRATIFER, "userclients",	1},
 	{ "worker.get",		PROC_STRATIFER,	"getworker",	1},
+	{ "worker.getclients",	PROC_STRATIFER, "workerclients",1},
 	{ "", -1, "" , 0}
 };
 
