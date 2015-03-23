@@ -56,6 +56,7 @@ COMMANDS WITHOUT PARAMS:
 
 COMMANDS WITH PARAMS:
 	COMMAND			PARAMS				OPTIONAL
+	client.get		id:$clientid
 	proxy.add		url:$url,auth:$auth,pass:$pass	userid:$userid
 	proxy.del		id:$proxyid
 	proxy.disable		id:$proxyid
@@ -77,6 +78,7 @@ struct api_command {
 	const char *proccmd;	/* Command to send to process */
 	bool params;		/* Does this command take parameters */
 } api_cmds[] = {
+	{ "client.get",		PROC_STRATIFER, "getclient",	1},
 	{ "connector.stats",	PROC_CONNECTOR,	"stats",	0},
 	{ "stratifier.stats",	PROC_STRATIFER,	"stats",	0},
 	{ "generator.stats",	PROC_GENERATOR, "stats",	0},
