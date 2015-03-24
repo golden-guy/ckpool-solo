@@ -57,6 +57,7 @@ COMMANDS WITHOUT PARAMS:
 	clients.info
 	connector.stats
 	generator.stats
+	pool.stats
 	proxy.list
 	stratifier.stats
 	users.info
@@ -102,10 +103,9 @@ struct api_command {
 	{ "client.get",		PROC_STRATIFER, "getclient",	1},
 	{ "clients.info",	PROC_STRATIFER, "clients",	0},
 	{ "connector.stats",	PROC_CONNECTOR,	"stats",	0},
-	{ "stratifier.stats",	PROC_STRATIFER,	"stats",	0},
 	{ "generator.stats",	PROC_GENERATOR, "stats",	0},
+	{ "pool.stats",		PROC_STRATIFER, "poolstats",	0},
 	{ "proxy.list",		PROC_GENERATOR, "list",		0},
-	{ "subproxy.list",	PROC_GENERATOR, "sublist",	1},
 	{ "proxy.add",		PROC_GENERATOR, "addproxy",	1},
 	{ "proxy.del",		PROC_GENERATOR, "delproxy",	1},
 	{ "proxy.enable",	PROC_GENERATOR, "enableproxy",	1},
@@ -114,6 +114,8 @@ struct api_command {
 	{ "proxy.info",		PROC_STRATIFER, "proxyinfo",	0},
 	{ "proxy.setprio",	PROC_STRATIFER,	"setproxy",	1},
 	{ "proxy.stats",	PROC_GENERATOR, "proxystats",	1},
+	{ "stratifier.stats",	PROC_STRATIFER,	"stats",	0},
+	{ "subproxy.list",	PROC_GENERATOR, "sublist",	1},
 	{ "user.get",		PROC_STRATIFER, "getuser",	1},
 	{ "user.getclients",	PROC_STRATIFER, "userclients",	1},
 	{ "user.clientinfo",	PROC_STRATIFER, "ucinfo",	1},
