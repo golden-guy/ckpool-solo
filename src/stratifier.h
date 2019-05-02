@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2017 Con Kolivas
+ * Copyright 2014-2020 Con Kolivas
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the Free
@@ -51,7 +51,6 @@ struct genwork {
 	char *txn_data;
 	char *txn_hashes;
 	char witnessdata[80]; //null-terminated ascii
-	bool insert_witness;
 	int merkles;
 	char merklehash[16][68];
 	char merklebin[16][32];

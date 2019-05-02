@@ -636,9 +636,9 @@ static void generate_coinbase(const ckpool_t *ckp, workbase_t *wb)
 	if (ckp->donvalid) {
 		d64 = g64 / 50; // 2% donation
 		g64 -= d64; // To guarantee integers add up to the original coinbasevalue
-		wb->coinb2bin[wb->coinb2len++] = 2 + wb->insert_witness;
+		wb->coinb2bin[wb->coinb2len++] = 2 + 1;
 	} else
-		wb->coinb2bin[wb->coinb2len++] = 1 + wb->insert_witness;
+		wb->coinb2bin[wb->coinb2len++] = 1 + 1;
 
 	u64 = (uint64_t *)&wb->coinb2bin[wb->coinb2len];
 	*u64 = htole64(g64);
@@ -647,7 +647,7 @@ static void generate_coinbase(const ckpool_t *ckp, workbase_t *wb)
 	/* Coinb2 address goes here, takes up 23~25 bytes + 1 byte for length */
 
 	wb->coinb3len = 0;
-	wb->coinb3bin = ckzalloc(256 + wb->insert_witness * (8 + witnessdata_size + 2));
+	wb->coinb3bin = ckzalloc(256 + (8 + witnessdata_size + 2));
 
 	if (ckp->donvalid) {
 		u64 = (uint64_t *)wb->coinb3bin;
@@ -659,17 +659,15 @@ static void generate_coinbase(const ckpool_t *ckp, workbase_t *wb)
 		wb->coinb3len += sdata->dontxnlen;
 	}
 
-	if (wb->insert_witness) {
-		// 0 value
-		wb->coinb3len += 8;
+	// 0 value
+	wb->coinb3len += 8;
 
-		wb->coinb3bin[wb->coinb3len++] = witnessdata_size + 2; // total scriptPubKey size
-		wb->coinb3bin[wb->coinb3len++] = 0x6a; // OP_RETURN
-		wb->coinb3bin[wb->coinb3len++] = witnessdata_size;
+	wb->coinb3bin[wb->coinb3len++] = witnessdata_size + 2; // total scriptPubKey size
+	wb->coinb3bin[wb->coinb3len++] = 0x6a; // OP_RETURN
+	wb->coinb3bin[wb->coinb3len++] = witnessdata_size;
 
-		hex2bin(&wb->coinb3bin[wb->coinb3len], wb->witnessdata, witnessdata_size);
-		wb->coinb3len += witnessdata_size;
-	}
+	hex2bin(&wb->coinb3bin[wb->coinb3len], wb->witnessdata, witnessdata_size);
+	wb->coinb3len += witnessdata_size;
 
 	wb->coinb3len += 4; // Blank lock
 
@@ -1536,7 +1534,6 @@ static void gbt_witness_data(workbase_t *wb, json_t *txn_array)
 	gen_hash(hashbin, hashbin + witness_header_size, 32 + witness_nonce_size);
 	memcpy(hashbin, witness_header, witness_header_size);
 	__bin2hex(wb->witnessdata, hashbin, 32 + witness_header_size);
-	wb->insert_witness = true;
 }
 
 /* This function assumes it will only receive a valid json gbt base template
@@ -1545,13 +1542,12 @@ static void gbt_witness_data(workbase_t *wb, json_t *txn_array)
  * are serialised. */
 static void block_update(ckpool_t *ckp, int *prio)
 {
-	const char* witnessdata_check, *rule;
-	json_t *txn_array, *rules_array;
+	bool new_block = false, ret = false;
+	const char* witnessdata_check;
 	sdata_t *sdata = ckp->sdata;
-	bool new_block = false;
-	int i, retries = 0;
-	bool ret = false;
+	json_t *txn_array;
 	txntable_t *txns;
+	int retries = 0;
 	workbase_t *wb;
 
 retry:
@@ -1572,28 +1568,11 @@ retry:
 	txn_array = json_object_get(wb->json, "transactions");
 	txns = wb_merkle_bin_txns(ckp, sdata, wb, txn_array, true);
 
-	wb->insert_witness = false;
-	rules_array = json_object_get(wb->json, "rules");
-
-	if (rules_array) {
-		int rule_count = json_array_size(rules_array);
-
-		for (i = 0; i < rule_count; i++) {
-			rule = json_string_value(json_array_get(rules_array, i));
-			if (!rule)
-				continue;
-			if (*rule == '!')
-				rule++;
-			if (safecmp(rule, "segwit")) {
-				witnessdata_check = json_string_value(json_object_get(wb->json, "default_witness_commitment"));
-				gbt_witness_data(wb, txn_array);
-				// Verify against the pre-calculated value if it exists. Skip the size/OP_RETURN bytes.
-				if (wb->insert_witness && witnessdata_check[0] && safecmp(witnessdata_check + 4, wb->witnessdata) != 0)
-					LOGERR("Witness from btcd: %s. Calculated Witness: %s", witnessdata_check + 4, wb->witnessdata);
-				break;
-			}
-		}
-	}
+	witnessdata_check = json_string_value(json_object_get(wb->json, "default_witness_commitment"));
+	gbt_witness_data(wb, txn_array);
+	// Verify against the pre-calculated value if it exists. Skip the size/OP_RETURN bytes.
+	if (witnessdata_check[0] && safecmp(witnessdata_check + 4, wb->witnessdata) != 0)
+		LOGERR("Witness from btcd: %s. Calculated Witness: %s", witnessdata_check + 4, wb->witnessdata);
 
 	generate_coinbase(ckp, wb);
 
