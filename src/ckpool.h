@@ -147,11 +147,6 @@ struct ckpool_instance {
 	char *name;
 	/* Directory where sockets are created */
 	char *socket_dir;
-	/* Directory where ckdb sockets are */
-	char *ckdb_sockdir;
-	/* Name of the ckdb process */
-	char *ckdb_name;
-	char *ckdb_sockname;
 	/* Group ID for unix sockets */
 	char *grpnam;
 	gid_t gr_gid;
@@ -193,8 +188,6 @@ struct ckpool_instance {
 
 	/* Are we running in trusted remote node mode */
 	bool remote;
-	/* Does our upstream pool in remote mode have ckdb */
-	bool upstream_ckdb;
 
 	/* Are we running in node proxy mode */
 	bool node;
@@ -207,9 +200,6 @@ struct ckpool_instance {
 
 	/* Are we running as a proxy */
 	bool proxy;
-
-	/* Are we running without ckdb */
-	bool standalone;
 
 	/* Are we running in btcsolo mode */
 	bool btcsolo;
@@ -336,12 +326,6 @@ static const char __maybe_unused *stratum_msgs[] = {
 	"mining.configure",
 	""
 };
-
-#ifdef USE_CKDB
-#define CKP_STANDALONE(CKP) ((CKP)->standalone == true)
-#else
-#define CKP_STANDALONE(CKP) ((CKP) == (CKP)) /* Always true, silences unused warn */
-#endif
 
 #define SAFE_HASH_OVERHEAD(HASHLIST) (HASHLIST ? HASH_OVERHEAD(hh, HASHLIST) : 0)
 

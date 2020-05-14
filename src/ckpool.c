@@ -457,10 +457,6 @@ retry:
 		msg = connector_stats(ckp->cdata, 0);
 		send_unix_msg(sockd, msg);
 		dealloc(msg);
-	} else if (cmdmatch(buf, "ckdbflush")) {
-		LOGWARNING("Received ckdb flush message");
-		send_proc(ckp->stratifier, buf);
-		send_unix_msg(sockd, "flushing");
 	} else if (cmdmatch(buf, "resetshares")) {
 		LOGWARNING("Resetting best shares");
 		send_proc(ckp->stratifier, buf);
@@ -737,49 +733,6 @@ char *_send_recv_proc(const proc_instance_t *pi, const char *msg, int writetimeo
 out:
 	if (unlikely(!buf))
 		LOGERR("Failure in send_recv_proc from %s %s:%d", file, func, line);
-	return buf;
-}
-
-/* As send_recv_proc but only to ckdb */
-char *_send_recv_ckdb(const ckpool_t *ckp, const char *msg, const char *file, const char *func, const int line)
-{
-	const char *path = ckp->ckdb_sockname;
-	char *buf = NULL;
-	int sockd;
-
-	if (unlikely(!path || !strlen(path))) {
-		LOGERR("Attempted to send message %s to null path in send_recv_ckdb", msg ? msg : "");
-		goto out;
-	}
-	if (unlikely(!msg || !strlen(msg))) {
-		LOGERR("Attempted to send null message to ckdb in send_recv_ckdb");
-		goto out;
-	}
-	sockd = open_unix_client(path);
-	if (unlikely(sockd < 0)) {
-		LOGWARNING("Failed to open socket %s in send_recv_ckdb", path);
-		goto out;
-	}
-	if (unlikely(!send_unix_msg(sockd, msg)))
-		LOGWARNING("Failed to send %s to ckdb", msg);
-	else
-		buf = recv_unix_msg(sockd);
-	Close(sockd);
-out:
-	if (unlikely(!buf))
-		LOGERR("Failure in send_recv_ckdb from %s %s:%d", file, func, line);
-	return buf;
-}
-
-/* Send a json msg to ckdb and return the response */
-char *_ckdb_msg_call(const ckpool_t *ckp, const char *msg,  const char *file, const char *func,
-		     const int line)
-{
-	char *buf = NULL;
-
-	LOGDEBUG("Sending ckdb: %s", msg);
-	buf = _send_recv_ckdb(ckp, msg, file, func, line);
-	LOGDEBUG("Received from ckdb: %s", buf);
 	return buf;
 }
 
@@ -1557,32 +1510,6 @@ static void prepare_child(ckpool_t *ckp, proc_instance_t *pi, void *process, cha
 	create_unix_receiver(pi);
 }
 
-#ifdef USE_CKDB
-static struct option long_options[] = {
-	{"standalone",	no_argument,		0,	'A'},
-	{"btcsolo",	no_argument,		0,	'B'},
-	{"config",	required_argument,	0,	'c'},
-	{"daemonise",	no_argument,		0,	'D'},
-	{"ckdb-name",	required_argument,	0,	'd'},
-	{"group",	required_argument,	0,	'g'},
-	{"handover",	no_argument,		0,	'H'},
-	{"help",	no_argument,		0,	'h'},
-	{"killold",	no_argument,		0,	'k'},
-	{"log-shares",	no_argument,		0,	'L'},
-	{"loglevel",	required_argument,	0,	'l'},
-	{"name",	required_argument,	0,	'n'},
-	{"node",	no_argument,		0,	'N'},
-	{"passthrough",	no_argument,		0,	'P'},
-	{"proxy",	no_argument,		0,	'p'},
-	{"quiet",	no_argument,		0,	'q'},
-	{"redirector",	no_argument,		0,	'R'},
-	{"ckdb-sockdir",required_argument,	0,	'S'},
-	{"sockdir",	required_argument,	0,	's'},
-	{"trusted",	no_argument,		0,	't'},
-	{"userproxy",	no_argument,		0,	'u'},
-	{0, 0, 0, 0}
-};
-#else
 static struct option long_options[] = {
 	{"btcsolo",	no_argument,		0,	'B'},
 	{"config",	required_argument,	0,	'c'},
@@ -1604,7 +1531,6 @@ static struct option long_options[] = {
 	{"userproxy",	no_argument,		0,	'u'},
 	{0, 0, 0, 0}
 };
-#endif
 
 static bool send_recv_path(const char *path, const char *msg)
 {
@@ -1645,25 +1571,18 @@ int main(int argc, char **argv)
 		ckp.initial_args[ckp.args] = strdup(argv[ckp.args]);
 	ckp.initial_args[ckp.args] = NULL;
 
-	while ((c = getopt_long(argc, argv, "ABc:Dd:g:HhkLl:Nn:PpqRS:s:tu", long_options, &i)) != -1) {
+	while ((c = getopt_long(argc, argv, "Bc:Dd:g:HhkLl:Nn:PpqRS:s:tu", long_options, &i)) != -1) {
 		switch (c) {
-			case 'A':
-				ckp.standalone = true;
-				break;
 			case 'B':
 				if (ckp.proxy)
 					quit(1, "Cannot set both proxy and btcsolo mode");
 				ckp.btcsolo = true;
-				ckp.standalone = true;
 				break;
 			case 'c':
 				ckp.config = optarg;
 				break;
 			case 'D':
 				ckp.daemon = true;
-				break;
-			case 'd':
-				ckp.ckdb_name = optarg;
 				break;
 			case 'g':
 				ckp.grpnam = optarg;
@@ -1705,7 +1624,7 @@ int main(int argc, char **argv)
 			case 'N':
 				if (ckp.proxy || ckp.redirector || ckp.userproxy || ckp.passthrough)
 					quit(1, "Cannot set another proxy type or redirector and node mode");
-				ckp.standalone = ckp.proxy = ckp.passthrough = ckp.node = true;
+				ckp.proxy = ckp.passthrough = ckp.node = true;
 				break;
 			case 'n':
 				ckp.name = optarg;
@@ -1713,7 +1632,7 @@ int main(int argc, char **argv)
 			case 'P':
 				if (ckp.proxy || ckp.redirector || ckp.userproxy || ckp.node)
 					quit(1, "Cannot set another proxy type or redirector and passthrough mode");
-				ckp.standalone = ckp.proxy = ckp.passthrough = true;
+				ckp.proxy = ckp.passthrough = true;
 				break;
 			case 'p':
 				if (ckp.passthrough || ckp.redirector || ckp.userproxy || ckp.node)
@@ -1726,10 +1645,7 @@ int main(int argc, char **argv)
 			case 'R':
 				if (ckp.proxy || ckp.passthrough || ckp.userproxy || ckp.node)
 					quit(1, "Cannot set a proxy type or passthrough and redirector modes");
-				ckp.standalone = ckp.proxy = ckp.passthrough = ckp.redirector = true;
-				break;
-			case 'S':
-				ckp.ckdb_sockdir = strdup(optarg);
+				ckp.proxy = ckp.passthrough = ckp.redirector = true;
 				break;
 			case 's':
 				ckp.socket_dir = strdup(optarg);
@@ -1737,7 +1653,7 @@ int main(int argc, char **argv)
 			case 't':
 				if (ckp.proxy)
 					quit(1, "Cannot set a proxy type and trusted remote mode");
-				ckp.standalone = ckp.remote = true;
+				ckp.remote = true;
 				break;
 			case 'u':
 				if (ckp.proxy || ckp.redirector || ckp.passthrough || ckp.node)
@@ -1784,23 +1700,6 @@ int main(int argc, char **argv)
 		realloc_strcat(&ckp.socket_dir, ckp.name);
 	}
 	trail_slash(&ckp.socket_dir);
-
-	if (!CKP_STANDALONE(&ckp)) {
-		if (!ckp.ckdb_name)
-			ckp.ckdb_name = "ckdb";
-		if (!ckp.ckdb_sockdir) {
-			ckp.ckdb_sockdir = strdup("/opt/");
-			realloc_strcat(&ckp.ckdb_sockdir, ckp.ckdb_name);
-		}
-		trail_slash(&ckp.ckdb_sockdir);
-
-		ret = mkdir(ckp.ckdb_sockdir, 0750);
-		if (ret && errno != EEXIST)
-			quit(1, "Failed to make directory %s", ckp.ckdb_sockdir);
-
-		ckp.ckdb_sockname = ckp.ckdb_sockdir;
-		realloc_strcat(&ckp.ckdb_sockname, "listener");
-	}
 
 	/* Ignore sigpipe */
 	signal(SIGPIPE, SIG_IGN);
