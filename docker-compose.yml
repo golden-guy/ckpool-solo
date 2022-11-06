@@ -1,0 +1,7 @@
+ version: "3.7"
+
+ services:
+   dockpool:
+     image: dockpool
+     ports:
+       - 3333:3333
