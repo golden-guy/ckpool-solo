@@ -242,6 +242,7 @@ struct ckpool_instance {
 	bool segwit; // Address is a segwit address
 	char *btcsig; // Optional signature to add to coinbase
 	char *donaddress; // Donation address
+	int donrate; // Donation rate
 	bool donscript; // Donation is a script
 	bool donsegwit; // Donation is segwit
 	bool donvalid; // Donation address works on this network

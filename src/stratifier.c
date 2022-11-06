@@ -598,8 +598,8 @@ static void generate_coinbase(const ckpool_t *ckp, workbase_t *wb)
 
 	// Generation value
 	g64 = wb->coinbasevalue;
-	if (ckp->donvalid) {
-		d64 = g64 / 50; // 2% donation
+	if (ckp->donvalid && ckp->donrate > 0) {
+		d64 = (g64 / 100) * ckp->donrate; // Calculate donation value
 		g64 -= d64; // To guarantee integers add up to the original coinbasevalue
 		wb->coinb2bin[wb->coinb2len++] = 2 + wb->insert_witness;
 	} else
@@ -614,7 +614,7 @@ static void generate_coinbase(const ckpool_t *ckp, workbase_t *wb)
 	wb->coinb3len = 0;
 	wb->coinb3bin = ckzalloc(256 + wb->insert_witness * (8 + witnessdata_size + 2));
 
-	if (ckp->donvalid) {
+	if (ckp->donvalid && ckp->donrate > 0) {
 		u64 = (uint64_t *)wb->coinb3bin;
 		*u64 = htole64(d64);
 		wb->coinb3len += 8;

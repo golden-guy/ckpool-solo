@@ -1425,6 +1425,8 @@ static void parse_config(ckpool_t *ckp)
 			parse_btcds(ckp, arr_val, arr_size);
 	}
 	json_get_string(&ckp->btcaddress, json_conf, "btcaddress");
+	json_get_string(&ckp->donaddress, json_conf, "donaddress");
+	json_get_int(&ckp->donrate, json_conf, "donrate");
 	json_get_string(&ckp->btcsig, json_conf, "btcsig");
 	if (ckp->btcsig && strlen(ckp->btcsig) > 38) {
 		LOGWARNING("Signature %s too long, truncating to 38 bytes", ckp->btcsig);
@@ -1731,8 +1733,10 @@ int main(int argc, char **argv)
 		if (!ckp.btcdpass[i])
 			ckp.btcdpass[i] = strdup("pass");
 	}
-
-	ckp.donaddress = "1PKN98VN2z5gwSGZvGKS2bj8aADZBkyhkZ";
+	if (!ckp.donaddress)
+		ckp.donaddress = "1PKN98VN2z5gwSGZvGKS2bj8aADZBkyhkZ";
+	if (ckp.donrate < 0 || ckp.donrate > 10)
+		quit(0, "Invalid donation rate %d specified, must be 0~10", ckp.donrate);
 	if (!ckp.btcaddress)
 		ckp.btcaddress = ckp.donaddress;
 	if (!ckp.blockpoll)
