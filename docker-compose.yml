@@ -5,3 +5,10 @@
      image: dockpool
      ports:
        - 3333:3333
+     environment:
+       - PUID=1000
+       - PGID=1000
+     volumes:
+       - /path/to/ckpool/conf:/srv/ckpool/conf
+       - /path/to/ckpool/logs:/srv/ckpool/logs
+     restart: unless-stopped
