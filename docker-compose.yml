@@ -9,6 +9,6 @@
        - PUID=1000
        - PGID=1000
      volumes:
-       - /path/to/ckpool/conf:/srv/ckpool/conf
-       - /path/to/ckpool/logs:/srv/ckpool/logs
+       - /path/to/dockpool/conf:/srv/dockpool/conf
+       - /path/to/dockpool/logs:/srv/dockpool/logs
      restart: unless-stopped
