@@ -5,6 +5,8 @@
      image: dockpool
      ports:
        - 3333:3333
+     extra_hosts:
+       - dockpool.local:host-gateway
      environment:
        - PUID=1000
        - PGID=1000
