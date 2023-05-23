@@ -1741,6 +1741,12 @@ int main(int argc, char **argv)
 		ckp.donaddress = "1PKN98VN2z5gwSGZvGKS2bj8aADZBkyhkZ";
 	if (ckp.donrate < 0 || ckp.donrate > 10)
 		quit(0, "Invalid donation rate %d specified, must be 0~10", ckp.donrate);
+
+	/* Donations on testnet are meaningless but required for complete
+	 * testing. Testnet and regtest addresses */
+	ckp.tndonaddress = "tb1q5fyv7tue73y4zxezh2c685qpwx0cfngfxlrgxh";
+	ckp.rtdonaddress = "bcrt1qlk935ze2fsu86zjp395uvtegztrkaezawxx0wf";
+
 	if (!ckp.btcaddress && !ckp.btcsolo)
 		quit(0, "Non-solo mining must have a btcaddress in config, aborting!");
 	if (!ckp.blockpoll)
