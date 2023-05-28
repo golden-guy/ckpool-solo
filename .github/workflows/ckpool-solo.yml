@@ -13,6 +13,8 @@ jobs:
 
     steps:
     - uses: actions/checkout@v3
+    - name: install_packages
+      run: sudo apt-get install -y yasm libzmq3-dev
     - name: autogen
       run: ./autogen.sh
     - name: configure
