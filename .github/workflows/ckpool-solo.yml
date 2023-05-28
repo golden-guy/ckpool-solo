@@ -1,4 +1,4 @@
-name: ckpool-solo CI
+name: ckpool-solo CI/CD
 
 on:
   push:
@@ -10,14 +10,30 @@ jobs:
   build:
 
     runs-on: ubuntu-latest
+    env:
+      install_dir: /usr/local/ckpool-solo
 
     steps:
     - uses: actions/checkout@v3
-    - name: install_packages
-      run: sudo apt-get install -y yasm libzmq3-dev
+
+    - name: install packages
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y yasm libzmq3-dev libcap2-bin
+
     - name: autogen
       run: ./autogen.sh
+
     - name: configure
-      run: ./configure
+      run: ./configure --prefix=${{ env.install_dir }}
+
     - name: make
       run: make
+
+    - name: make install
+      run: sudo make install
+
+    - uses: actions/upload-artifact@v3
+      with:
+        name: ckpool-solo_${{ github.sha }}
+        path: ${{ env.install_dir }}
