@@ -1738,8 +1738,8 @@ int main(int argc, char **argv)
 		ckp.donaddress = "1PKN98VN2z5gwSGZvGKS2bj8aADZBkyhkZ";
 	if (ckp.donrate < 0 || ckp.donrate > 10)
 		quit(0, "Invalid donation rate %d specified, must be 0~10", ckp.donrate);
-	if (!ckp.btcaddress)
-		ckp.btcaddress = ckp.donaddress;
+	if (!ckp.btcaddress && !ckp.btcsolo)
+		quit(0, "Non-solo mining must have a btcaddress in config, aborting!");
 	if (!ckp.blockpoll)
 		ckp.blockpoll = 100;
 	if (!ckp.nonce1length)
