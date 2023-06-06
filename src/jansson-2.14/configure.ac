@@ -1,4 +1,4 @@
-AC_PREREQ([2.71])
+AC_PREREQ([2.60])
 AC_INIT([jansson],[2.14],[https://github.com/akheron/jansson/issues])
 
 AC_CONFIG_AUX_DIR([.])
