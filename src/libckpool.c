@@ -2060,6 +2060,9 @@ double sane_tdiff(tv_t *end, tv_t *start)
  * associated suitable for Mega, Giga etc. Buf array needs to be long enough */
 void suffix_string(double val, char *buf, size_t bufsiz, int sigdigits)
 {
+	const double nano = 0.000000001;
+	const double micro = 0.000001;
+	const double milli = 0.001;
 	const double kilo = 1000;
 	const double mega = 1000000;
 	const double giga = 1000000000;
@@ -2093,6 +2096,17 @@ void suffix_string(double val, char *buf, size_t bufsiz, int sigdigits)
 	} else if (val >= kilo) {
 		dval = val / kilo;
 		strcpy(suffix, "K");
+	} else if (val >= 1) {
+		dval = val;
+	} else if (val >= milli) {
+		dval = val / milli;
+		strcpy(suffix, "m");
+	} else if (val >= micro) {
+		dval = val / micro;
+		strcpy(suffix, "u");
+	} else if (val >= nano) {
+		dval = val / nano;
+		strcpy(suffix, "n");
 	} else {
 		dval = val;
 		decimal = false;

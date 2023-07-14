@@ -145,9 +145,10 @@ struct user_instance {
 	struct userwb *userwbs; /* Protected by instance lock */
 
 	double best_diff; /* Best share found by this user */
-	int64_t best_ever; /* Best share ever found by this user */
+	double best_ever; /* Best share ever found by this user */
 
 	int64_t shares;
+	double diff_shares;
 
 	int64_t uadiff; /* Shares not yet accounted for in hashmeter */
 
@@ -178,6 +179,7 @@ struct worker_instance {
 	worker_instance_t *prev;
 
 	int64_t shares;
+	double diff_shares;
 
 	int64_t uadiff; /* Shares not yet accounted for in hashmeter */
 
@@ -191,7 +193,7 @@ struct worker_instance {
 	time_t start_time;
 
 	double best_diff; /* Best share found by this worker */
-	int64_t best_ever; /* Best share ever found by this worker */
+	double best_ever; /* Best share ever found by this worker */
 	int mindiff; /* User chosen mindiff */
 
 	bool idle;
@@ -4931,10 +4933,14 @@ static json_t *parse_subscribe(stratum_instance_t *client, const int64_t client_
 		const char *buf;
 
 		buf = json_string_value(json_array_get(params_val, 0));
-		if (buf && strlen(buf))
+		if (buf && strlen(buf)) {
 			client->useragent = strdup(buf);
-		else
-			client->useragent = ckzalloc(1); // Set to ""
+			// Only allow nerdminers to subscribe
+			if (safecmp(client->useragent, "NerdMinerV2")) {
+				stratum_send_message(ckp_sdata, client, "Only nerdminers allowed");
+				return json_string("Only nerdminers allowed");
+			}
+		}
 		if (arr_size > 1) {
 			/* This would be the session id for reconnect, it will
 			 * not work for clients on a proxied connection. */
@@ -4952,13 +4958,11 @@ static json_t *parse_subscribe(stratum_instance_t *client, const int64_t client_
 				ck_runlock(&ckp_sdata->workbase_lock);
 			}
 		}
-	} else
-		client->useragent = ckzalloc(1);
-
-	/* Whitelist cgminer based clients to receive stratum messages */
-	if (strcasestr(client->useragent, "gminer"))
-		client->messages = true;
-
+	} else {
+		// Block empty useragent as well
+		stratum_send_message(ckp_sdata, client, "Empty useragent not allowed");
+		return json_string("Empty useragent not allowed");
+	}
 	/* We got what we needed */
 	if (ckp->node)
 		return NULL;
@@ -5189,12 +5193,12 @@ static void read_userstats(ckpool_t *ckp, sdata_t *sdata, int tvsec_diff)
 		user->last_share.tv_sec = lastshare;
 		json_get_int64(&user->shares, val, "shares");
 		json_get_double(&user->best_diff, val, "bestshare");
-		json_get_int64(&user->best_ever, val, "bestever");
+		json_get_double(&user->best_ever, val, "bestever");
 		json_get_int64(&authorised, val, "authorised");
 		user->auth_time = authorised;
 		if (user->best_diff > user->best_ever)
 			user->best_ever = user->best_diff;
-		LOGINFO("Successfully read user %s stats %f %f %f %f %f %f %ld %ld", user->username,
+		LOGINFO("Successfully read user %s stats %f %f %f %f %f %f %f %ld", user->username,
 			user->dsps1, user->dsps5, user->dsps60, user->dsps1440,
 			user->dsps10080, user->best_diff, user->best_ever, user->auth_time);
 		if (tvsec_diff > 60)
@@ -5226,11 +5230,11 @@ static void read_userstats(ckpool_t *ckp, sdata_t *sdata, int tvsec_diff)
 			json_get_int(&lastshare, arr_val, "lastshare");
 			worker->last_share.tv_sec = lastshare;
 			json_get_double(&worker->best_diff, arr_val, "bestshare");
-			json_get_int64(&worker->best_ever, arr_val, "bestever");
+			json_get_double(&worker->best_ever, arr_val, "bestever");
 			if (worker->best_diff > worker->best_ever)
 				worker->best_ever = worker->best_diff;
 			json_get_int64(&worker->shares, arr_val, "shares");
-			LOGINFO("Successfully read worker %s stats %f %f %f %f %f %ld", worker->workername,
+			LOGINFO("Successfully read worker %s stats %f %f %f %f %f %f", worker->workername,
 				worker->dsps1, worker->dsps5, worker->dsps60, worker->dsps1440, worker->best_diff, worker->best_ever);
 			if (tvsec_diff > 60)
 				decay_worker(worker, 0, &now);
@@ -5578,8 +5582,8 @@ static double time_bias(const double tdiff, const double period)
 }
 
 /* Needs to be entered with client holding a ref count. */
-static void add_submit(ckpool_t *ckp, stratum_instance_t *client, const double diff, const bool valid,
-		       const bool submit)
+static void add_submit(ckpool_t *ckp, stratum_instance_t *client, const double diff, const double sdiff,
+		       const bool valid, const bool submit)
 {
 	sdata_t *ckp_sdata = ckp->sdata, *sdata = client->sdata;
 	worker_instance_t *worker = client->worker_instance;
@@ -5598,8 +5602,20 @@ static void add_submit(ckpool_t *ckp, stratum_instance_t *client, const double d
 
 	/* Count only accepted and stale rejects in diff calculation. */
 	if (valid) {
-		worker->shares += diff;
-		user->shares += diff;
+		worker->diff_shares += sdiff;
+		worker->shares += worker->diff_shares;
+		LOGDEBUG("worker->diff_shares: %.10g", worker->diff_shares);
+		// reset diff_shares
+		if (worker->diff_shares > 1.0)
+			worker->diff_shares = 0.0;
+
+		user->diff_shares += sdiff;
+		user->shares += user->diff_shares;
+		LOGDEBUG("user->diff_shares: %.10g", user->diff_shares);
+		// reset diff_shares
+		if (user->diff_shares > 1.0)
+			user->diff_shares = 0.0;
+
 	} else if (!submit)
 		return;
 
@@ -5651,7 +5667,10 @@ static void add_submit(ckpool_t *ckp, stratum_instance_t *client, const double d
 
 	/* Diff rate ratio */
 	dsps = client->dsps5 / bias;
-	drr = dsps / (double)client->diff;
+	if (client->diff == 0.0)
+		drr = dsps;
+	else
+		drr = dsps / (double)client->diff;
 
 	/* Optimal rate product is 0.3, allow some hysteresis. */
 	if (drr > 0.15 && drr < 0.4)
@@ -6109,7 +6128,7 @@ static json_t *parse_submit(stratum_instance_t *client, json_t *json_msg,
 		worker_instance_t *worker = client->worker_instance;
 
 		client->best_diff = sdiff;
-		LOGINFO("User %s worker %s client %s new best diff %lf", user->username,
+		LOGINFO("User %s worker %s client %s new best diff %.10g", user->username,
 			worker->workername, client->identity, sdiff);
 		check_best_diff(sdata, user, worker, sdiff, client);
 	}
@@ -6159,7 +6178,7 @@ out_nowb:
 		suffix_string(wdiff, wdiffsuffix, 16, 0);
 		if (sdiff >= diff) {
 			if (new_share(sdata, hash, id)) {
-				LOGINFO("Accepted client %s share diff %.1f/%.0f/%s: %s",
+				LOGINFO("Accepted client %s share diff %.10f/%.0f/%s: %s",
 					client->identity, sdiff, diff, wdiffsuffix, hexhash);
 				result = true;
 			} else {
@@ -6186,7 +6205,7 @@ out_nowb:
 		submit_share(client, id, nonce2, ntime, nonce);
 	}
 
-	add_submit(ckp, client, diff, result, submit);
+	add_submit(ckp, client, diff, sdiff, result, submit);
 
 	/* Now write to the pool's sharelog. */
 	val = json_object();
@@ -7889,7 +7908,7 @@ static void *statsupdate(void *arg)
 
 	while (42) {
 		double ghs, ghs1, ghs5, ghs15, ghs60, ghs360, ghs1440, ghs10080,
-			per_tdiff, percent;
+			per_tdiff, percent, uptime;
 		char suffix1[16], suffix5[16], suffix15[16], suffix60[16], cdfield[64];
 		char suffix360[16], suffix1440[16], suffix10080[16];
 		int remote_users = 0, remote_workers = 0, idle_workers = 0;
@@ -7962,6 +7981,7 @@ static void *statsupdate(void *arg)
 			worker_instance_t *worker;
 			json_t *user_array;
 			bool idle = false;
+			uptime = time(NULL) - user->auth_time;
 
 			if (!user->authorised)
 				continue;
@@ -7980,22 +8000,24 @@ static void *statsupdate(void *arg)
 				idle = true;
 			}
 
-			ghs = user->dsps1440 * nonces;
-			suffix_string(ghs, suffix1440, 16, 0);
-
-			ghs = user->dsps1 * nonces;
+			ghs = stats->sps1 * 60 * 1000 * (user->workers + user->remote_workers) / (stats->workers + stats->remote_workers);
 			suffix_string(ghs, suffix1, 16, 0);
 
-			ghs = user->dsps5 * nonces;
+			ghs = stats->sps5 * 60 * 1000 * (user->workers + user->remote_workers) / (stats->workers + stats->remote_workers);
 			suffix_string(ghs, suffix5, 16, 0);
 
-			ghs = user->dsps60 * nonces;
+			ghs = stats->sps60 * 60 * 1000 * (user->workers + user->remote_workers) / (stats->workers + stats->remote_workers);
 			suffix_string(ghs, suffix60, 16, 0);
 
-			ghs = user->dsps10080 * nonces;
+			ghs = stats->sps60 * 60 * 1000 * MIN(uptime / 86400, 1)
+			      * (user->workers + user->remote_workers) / (stats->workers + stats->remote_workers);
+			suffix_string(ghs, suffix1440, 16, 0);
+
+			ghs = stats->sps60 * 60 * 1000 * MIN(uptime / 604800, 1)
+			      * (user->workers + user->remote_workers) / (stats->workers + stats->remote_workers);
 			suffix_string(ghs, suffix10080, 16, 0);
 
-			JSON_CPACK(val, "{ss,ss,ss,ss,ss,si,si,sI,sf,sI, sI}",
+			JSON_CPACK(val, "{ss,ss,ss,ss,ss,si,si,sI,sf,sf, sI}",
 					"hashrate1m", suffix1,
 					"hashrate5m", suffix5,
 					"hashrate1hr", suffix60,
@@ -8031,6 +8053,7 @@ static void *statsupdate(void *arg)
 			while ((worker = next_worker(sdata, user, worker)) != NULL) {
 				json_t *wval;
 
+				uptime = time(NULL) - worker->start_time;
 				per_tdiff = tvdiff(&now, &worker->last_share);
 				if (per_tdiff > 60) {
 					/* Drop storage of workers idle for 1 week */
@@ -8042,24 +8065,24 @@ static void *statsupdate(void *arg)
 					worker->idle = true;
 				}
 
-				ghs = worker->dsps1440 * nonces;
-				suffix_string(ghs, suffix1440, 16, 0);
-
-				ghs = worker->dsps1 * nonces;
+				ghs = stats->sps1 * 60 * 1000 / (stats->workers + stats->remote_workers);
 				suffix_string(ghs, suffix1, 16, 0);
 
-				ghs = worker->dsps5 * nonces;
+				ghs = stats->sps5 * 60 * 1000 / (stats->workers + stats->remote_workers);
 				suffix_string(ghs, suffix5, 16, 0);
 
-				ghs = worker->dsps60 * nonces;
+				ghs = stats->sps60 * 60 * 1000 / (stats->workers + stats->remote_workers);
 				suffix_string(ghs, suffix60, 16, 0);
 
-				ghs = worker->dsps10080 * nonces;
+				ghs = stats->sps60 * 60 * 1000 * MIN(uptime / 86400, 1) / (stats->workers + stats->remote_workers);
+				suffix_string(ghs, suffix1440, 16, 0);
+
+				ghs = stats->sps60 * 60 * 1000 * MIN(uptime / 604800, 1) / (stats->workers + stats->remote_workers);
 				suffix_string(ghs, suffix10080, 16, 0);
 
 				LOGDEBUG("Storing worker %s", worker->workername);
 
-				JSON_CPACK(wval, "{ss,ss,ss,ss,ss,ss,si,sI,sf,sI}",
+				JSON_CPACK(wval, "{ss,ss,ss,ss,ss,ss,si,sI,sf,sf}",
 						"workername", worker->workername,
 						"hashrate1m", suffix1,
 						"hashrate5m", suffix5,
@@ -8083,6 +8106,7 @@ static void *statsupdate(void *arg)
 				upstream_workers(ckp, user);
 		}
 
+		uptime = time(NULL) - stats->start_time.tv_sec;
 		if (remote_workers) {
 			mutex_lock(&sdata->stats_lock);
 			stats->remote_workers = remote_workers;
@@ -8094,25 +8118,25 @@ static void *statsupdate(void *arg)
 		dump_log_entries(&log_entries);
 		notice_msg_entries(&char_list);
 
-		ghs1 = stats->dsps1 * nonces;
+		ghs1 = stats->sps1 * 60 * 1000;
 		suffix_string(ghs1, suffix1, 16, 0);
 
-		ghs5 = stats->dsps5 * nonces;
+		ghs5 = stats->sps5 * 60 * 1000;
 		suffix_string(ghs5, suffix5, 16, 0);
 
-		ghs15 = stats->dsps15 * nonces;
+		ghs15 = stats->sps15 * 60 * 1000;
 		suffix_string(ghs15, suffix15, 16, 0);
 
-		ghs60 = stats->dsps60 * nonces;
+		ghs60 = stats->sps60 * 60 * 1000;
 		suffix_string(ghs60, suffix60, 16, 0);
 
-		ghs360 = stats->dsps360 * nonces;
+		ghs360 = stats->sps60 * 60 * 1000 * MIN(uptime / 21600, 1);
 		suffix_string(ghs360, suffix360, 16, 0);
 
-		ghs1440 = stats->dsps1440 * nonces;
+		ghs1440 = stats->sps60 * 60 * 1000 * MIN(uptime / 86400, 1);
 		suffix_string(ghs1440, suffix1440, 16, 0);
 
-		ghs10080 = stats->dsps10080 * nonces;
+		ghs10080 = stats->sps60 * 60 * 1000 * MIN(uptime / 604800, 1);
 		suffix_string(ghs10080, suffix10080, 16, 0);
 
 		ASPRINTF(&fname, "%s/pool/pool.status", ckp->logdir);
@@ -8396,7 +8420,7 @@ void *throbber(void *arg)
 			continue;
 		sdiff = sdata->stats.accounted_diff_shares;
 		stats = &sdata->stats;
-		suffix_string(stats->dsps1 * nonces, hashrate, 16, 3);
+		suffix_string(stats->sps1 * 60 * 1000, hashrate, 16, 3);
 		ch = status_chars[(counter++) & 0x3];
 		get_timestamp(stamp);
 		if (likely(sdata->current_workbase)) {
