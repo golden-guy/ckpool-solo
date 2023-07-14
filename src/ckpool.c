@@ -1458,8 +1458,8 @@ static void parse_config(ckpool_t *ckp)
 	arr_val = json_object_get(json_conf, "trusted");
 	parse_trusted(ckp, arr_val);
 	json_get_string(&ckp->upstream, json_conf, "upstream");
-	json_get_int64(&ckp->mindiff, json_conf, "mindiff");
-	json_get_int64(&ckp->startdiff, json_conf, "startdiff");
+	json_get_double(&ckp->mindiff, json_conf, "mindiff");
+	json_get_double(&ckp->startdiff, json_conf, "startdiff");
 	json_get_int64(&ckp->highdiff, json_conf, "highdiff");
 	json_get_int64(&ckp->maxdiff, json_conf, "maxdiff");
 	json_get_string(&ckp->logdir, json_conf, "logdir");
@@ -1758,9 +1758,9 @@ int main(int argc, char **argv)
 	if (!ckp.update_interval)
 		ckp.update_interval = 30;
 	if (!ckp.mindiff)
-		ckp.mindiff = 1;
+		ckp.mindiff = 1.0;
 	if (!ckp.startdiff)
-		ckp.startdiff = 42;
+		ckp.startdiff = 42.0;
 	if (!ckp.highdiff)
 		ckp.highdiff = 1000000;
 	if (!ckp.logdir)

@@ -233,8 +233,8 @@ struct ckpool_instance {
 	int nonce2length; // Extranonce2 length
 
 	/* Difficulty settings */
-	int64_t mindiff; // Default 1
-	int64_t startdiff; // Default 42
+	double mindiff; // Default 1.0
+	double startdiff; // Default 42.0
 	int64_t highdiff; // Default 1000000
 	int64_t maxdiff; // No default
 
