@@ -119,6 +119,7 @@ struct server_instance {
 	char *url;
 	char *auth;
 	char *pass;
+	char *cookie;
 	bool notify;
 	bool alive;
 	connsock_t cs;
@@ -225,6 +226,7 @@ struct ckpool_instance {
 	char **btcdurl;
 	char **btcdauth;
 	char **btcdpass;
+	char **btcdcookie;
 	bool *btcdnotify;
 	int blockpoll; // How frequently in ms to poll bitcoind for block updates
 	int nonce1length; // Extranonce1 length

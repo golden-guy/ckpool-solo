@@ -225,9 +225,15 @@ static bool server_alive(ckpool_t *ckp, server_instance_t *si, bool pinging)
 		LOGWARNING("Failed to extract address from %s", si->url);
 		return ret;
 	}
-	userpass = strdup(si->auth);
-	realloc_strcat(&userpass, ":");
-	realloc_strcat(&userpass, si->pass);
+	/* Use btcd cookie file for authentication */
+	if (si->cookie) {
+		LOGDEBUG("Using cookie auth: %s", si->cookie);
+		userpass = strdup(si->cookie);
+	} else {
+		userpass = strdup(si->auth);
+		realloc_strcat(&userpass, ":");
+		realloc_strcat(&userpass, si->pass);
+	}
 	dealloc(cs->auth);
 	cs->auth = http_base64(userpass);
 	if (!cs->auth) {
@@ -3257,6 +3263,34 @@ out:
 	return;
 }
 
+/* Read btcd cookie file from path, check if the path exists and
+ * return the cookie value. Otherwise, bail out with an error. */
+static char *read_cookie(const char *path)
+{
+	FILE *fp;
+	char buf[76];
+	char *cookie = NULL;
+
+	if(!path) {
+		return NULL;
+	}
+
+	fp = fopen(path, "r");
+	if (!fp) {
+		LOGERR("Failed to open cookie file %s", path);
+		return NULL;
+	}
+	cookie = fgets(buf, sizeof(buf), fp);
+	fclose(fp);
+
+	/* Check for valid cookie string */
+	if(!strstr(cookie, "__cookie__:")) {
+		return NULL;
+	}
+
+	return cookie;
+}
+
 /* Check which servers are alive, maintaining a connection with them and
  * reconnect if a higher priority one is available. */
 static void *server_watchdog(void *arg)
@@ -3297,12 +3331,15 @@ static void setup_servers(ckpool_t *ckp)
 	for (i = 0; i < ckp->btcds; i++) {
 		server_instance_t *si;
 		connsock_t *cs;
+		char *btcdcookie = NULL;
 
 		ckp->servers[i] = ckzalloc(sizeof(server_instance_t));
 		si = ckp->servers[i];
 		si->url = ckp->btcdurl[i];
 		si->auth = ckp->btcdauth[i];
 		si->pass = ckp->btcdpass[i];
+		if(btcdcookie = read_cookie(ckp->btcdcookie[i]))
+			si->cookie = strdup(btcdcookie);
 		si->notify = ckp->btcdnotify[i];
 		si->id = i;
 		cs = &si->cs;
