@@ -82,7 +82,7 @@ struct pool_stats {
 	double dsps10080;
 
 	double network_diff;
-	int64_t best_diff;
+	double best_diff;
 };
 
 typedef struct pool_stats pool_stats_t;
@@ -8165,7 +8165,7 @@ static void *statsupdate(void *arg)
 
 		/* Round to 4 significant digits */
 		percent = round(stats->accounted_diff_shares * 10000 / stats->network_diff) / 100;
-		JSON_CPACK(val, "{sf,sf,sf,sI,sf,sf,sf,sf}",
+		JSON_CPACK(val, "{sf,sf,sf,sf,sf,sf,sf,sf}",
 			        "diff", percent,
 				"accepted", stats->accounted_diff_shares,
 				"rejected", stats->accounted_rejects,
@@ -8367,7 +8367,7 @@ static void read_poolstats(ckpool_t *ckp, int *tvsec_diff)
 	json_get_double(&stats->sps60, val, "SPS1h");
 	json_get_double(&stats->accounted_diff_shares, val, "accepted");
 	json_get_double(&stats->accounted_rejects, val, "rejected");
-	json_get_int64(&stats->best_diff, val, "bestshare");
+	json_get_double(&stats->best_diff, val, "bestshare");
 	json_decref(val);
 
 	LOGINFO("Successfully read pool sps: %s", sps);
