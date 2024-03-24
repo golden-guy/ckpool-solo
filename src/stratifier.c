@@ -5062,7 +5062,7 @@ static void decay_client(stratum_instance_t *client, double diff, tv_t *now_t)
 	 * at most 20 times per second. Use an integer for uadiff to make the
 	 * update atomic */
 	if (tdiff < 0.05) {
-		client->uadiff += MAX(1, diff);
+		client->uadiff += diff;
 		return;
 	}
 	copy_tv(&client->last_decay, now_t);
@@ -5080,7 +5080,7 @@ static void decay_worker(worker_instance_t *worker, double diff, tv_t *now_t)
 	double tdiff = sane_tdiff(now_t, &worker->last_decay);
 
 	if (tdiff < 0.05) {
-		worker->uadiff += MAX(1, diff);
+		worker->uadiff += diff;
 		return;
 	}
 	copy_tv(&worker->last_decay, now_t);
@@ -5098,7 +5098,7 @@ static void decay_user(user_instance_t *user, double diff, tv_t *now_t)
 	double tdiff = sane_tdiff(now_t, &user->last_decay);
 
 	if (tdiff < 0.05) {
-		user->uadiff += MAX(1, diff);
+		user->uadiff += diff;
 		return;
 	}
 	copy_tv(&user->last_decay, now_t);
